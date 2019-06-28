@@ -6,18 +6,19 @@ using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using UnityStandardAssets.Characters.FirstPerson;
 
-// Hotspot, Node and LargeObject are already in the global project namespace because of Tree_spawning. Test_2FStates because of Test_2_Kitchen.
-public enum livingLarges {
+public enum fullLarges {
 	L_BOOKCASE,
 	L_DESK,
 	L_DOOR,
 	L_STUFF,
 	L_TABLE_CHAIRS,
-	L_TV_AREA
+	L_TV_AREA,
+	L_CABINET,
+	L_CHAIR,
+	L_MOD_KITCHEN
 }
 
-
-public class Test_2_Living : MonoBehaviour {
+public class Test_3_Full : MonoBehaviour {
 
 	// These go on the floor
 	public Transform bookcase;
@@ -26,14 +27,20 @@ public class Test_2_Living : MonoBehaviour {
 	public Transform TV_area;
 	public Transform table_chairs;
 	public Transform door;
+	public Transform mod_kitchen;
+	public Transform kitchen_chair;
+	public Transform cabinet;
 
 	[Space(10)]
 	// table-bound small items
-	public Transform bottle;
+	public Transform cereal_box;
 	public Transform cola;
+	public Transform dish;
 	public Transform fruitbowl;
-	public Transform moka;
+	public Transform jug;
+	public Transform pear;
 	public Transform teacup;
+	public Transform tin_can;
 	public Transform wine_flask;
 	
 	[Space(10)]
@@ -48,13 +55,29 @@ public class Test_2_Living : MonoBehaviour {
 	public Transform printer;
 	
 	[Space(10)]
+	//kitchen-bound
+	public Transform bottle;
+	public Transform chef_knife;
+	public Transform cutting_board;
+	public Transform dish_soap;
+	public Transform knife_block;
+	public Transform microwave;
+	public Transform moka;
+	public Transform pan;
+	public Transform pineapple;
+	public Transform pot_small;
+	
+	[Space(10)]
 	//stuff-bound
-	public Transform ac_guitar;
+	//public Transform ac_guitar;
 	public Transform cat;
-	public Transform ele_guitar;
+	public Transform dog;
+	//public Transform ele_guitar;
+	public Transform pillow;
 	public Transform shoes;
-	public Transform working_boots;
+	public Transform soccer_ball;
 	public Transform teddy_bear;
+	public Transform working_boots;
 	
 	[Space(10)]
 	public Transform marker;
@@ -68,11 +91,17 @@ public class Test_2_Living : MonoBehaviour {
 	public applyShader rightEye;
 	
 	[Space(10)]
+	public bool restrictKitchen = false;
+	[Space(10)]
 	public string subject;
-	public int runs = 4;
+	
+	[Tooltip("Each run is composed by 12 tests, looping over 80/120, 60/90 and 40/60 layouts, and 15/25/35/45 degrees of FOV")]
+	public int runs = 10;
+    [Tooltip("If you make a pause between iterations and quit the test, this will let you assign your value.")]
+    public int iterationVal = 1;
 	//public StaticValues sval;
 	
-	private Test_2FStates state;
+	private Test_3FStates state;
 	
 	private Vector2 currRes;
 	private Transform targ;
@@ -80,51 +109,42 @@ public class Test_2_Living : MonoBehaviour {
 	private System.DateTime begin;
 	private System.DateTime end;
 	private string elapsed;
+	private float deltaTime;
+	
 	private bool resUpdated;
+	//private InputField infield;
 
 	void BuildTree(Node root) {
-		/* Level 1: big items
-		 * Level 2: top items
-		 *
-		 * When building big items, I'll check the content of the node
-		 * (which maybe should have strings instead of the real objects)
-		 * and then create a proper LargeObject. Best practice, do this
-		 * by creating a constructor.
-		 *
-		 * NOTE: This function is working, but is a bad practice for extending.
-		 * It would be appropriate, in time, to replace it with something allowing for multiple layers of
-		 * large objects and variable numbers of such.
-		 */
 
-		// This has to be hardcoded. Only table and chair can go in the middle.
 		root.content = null;
 		root.largeContent = buildFloor();
 		root.parent = null;
 		root.children = new List<Node>();
 		
-		List<int> lv1 = new List<int> {0, 1, 2, 3, 4, 5};
-		Shuffle(lv1);
+		List<int> lv1 = new List<int> {1, 8, 2, 0, 6, 5, 7, 4, 3};
+		//Shuffle(lv1);
 
 		List<Transform> table_obj = new List<Transform>();
 		table_obj.Add(bottle);
 		table_obj.Add(cola);
 		table_obj.Add(fruitbowl);
-		table_obj.Add(moka);
-		table_obj.Add(teacup);
+		table_obj.Add(dish);
+		table_obj.Add(jug);
+		table_obj.Add(tin_can);
 		table_obj.Add(wine_flask);
+		
+		List<Transform> kitchen_obj = new List<Transform>();
+		kitchen_obj.Add(cutting_board);
+		kitchen_obj.Add(dish_soap);
+		kitchen_obj.Add(knife_block);
+		kitchen_obj.Add(microwave);
+		kitchen_obj.Add(moka);
+		kitchen_obj.Add(pineapple);
 		
 		List<Transform> desk_obj = new List<Transform>();
 		// The first is a small one, the second the accessory, the last the main
-		switch ((int)Mathf.Floor(Random.value*1.99f)) {
-			case 0: {
-				desk_obj.Add(coffee_mug);
-			}
-			break;
-			case 1: {
-				desk_obj.Add(scissors);
-			}
-			break;
-		}
+		desk_obj.Add(scissors);
+		
 		switch ((int)Mathf.Floor(Random.value*1.99f)) {
 			case 0: {
 				desk_obj.Add(fan);
@@ -155,46 +175,67 @@ public class Test_2_Living : MonoBehaviour {
 		}
 		
 		List<Transform> stuff_obj = new List<Transform>();
-		stuff_obj.Add(ac_guitar);
+		//stuff_obj.Add(ac_guitar);
 		stuff_obj.Add(cat);
-		stuff_obj.Add(ele_guitar);
+		stuff_obj.Add(dog);
+		//stuff_obj.Add(ele_guitar);
+		stuff_obj.Add(pillow);
 		stuff_obj.Add(shoes);
-		stuff_obj.Add(working_boots);
+		stuff_obj.Add(soccer_ball);
 		stuff_obj.Add(teddy_bear);
+		stuff_obj.Add(working_boots);
 	
 		Shuffle(table_obj);
-		Shuffle(stuff_obj);
-		
+        do {
+            Shuffle(kitchen_obj);
+        } while (kitchen_obj[5] == microwave);
 		do {
-			// Pick a target from one of the lists.
-			switch ((int)Mathf.Floor(Random.value*2.99f)) {
-				case 0: {
-					// 4 objects instantiated
-					if(table_obj.Count <= 0) {
-						break;
-					}
-					targ = table_obj[table_obj.Count-(int)Mathf.Floor(Random.value*3.99f)-1];
-				}
-				break;
-				case 1: {
-					// 3 objects instantiated
-					if(desk_obj.Count <= 0) {
-						break;
-					}
-					targ = desk_obj[desk_obj.Count-(int)Mathf.Floor(Random.value*2.99f)-1];
-				}
-				break;
-				case 2: {
-					// 4 objects instantiated
-					if(stuff_obj.Count <= 0) {
-						break;
-					}
-					targ = stuff_obj[stuff_obj.Count-(int)Mathf.Floor(Random.value*3.99f)-1];
-				}
+            Shuffle(stuff_obj);
+        } while (stuff_obj[stuff_obj.Count-1] == dog);
+		
+		if (Random.value > 0.5) {
+			kitchen_obj.Add(pan);
+		} else {
+			kitchen_obj.Add(pot_small);
+		}
+		
+		targ = coffee_mug;
+		
+		// Here I swap the coffee mug for one random item anywhere.
+		// 4 objects on the table, 4 on the ground, 3 on the desk, 7 on the kitchen, total 18
+		// At everz iteration it will be in a different place
+		int firstRoll;
+		do {
+			firstRoll = (int)Mathf.Floor(Random.value*3.99f);
+		} while ((firstRoll) == StaticValues.lastPosition);
+		StaticValues.lastPosition = firstRoll;
+		
+		switch (firstRoll) {
+			case 0: {
+				desk_obj[desk_obj.Count -1 -(int)Mathf.Floor(Random.value*2.99f)] = coffee_mug;
 				break;
 			}
-		} while (StaticValues.tested.Contains(targ));
-		StaticValues.tested.Add(targ);
+			case 1: {
+				table_obj[table_obj.Count -1 -(int)Mathf.Floor(Random.value*3.99f)] = coffee_mug;
+				break;
+			}
+			case 2: {
+				stuff_obj[stuff_obj.Count -1 -(int)Mathf.Floor(Random.value*3.99f)] = coffee_mug;
+				break;
+			}
+			case 3: {
+				kitchen_obj[kitchen_obj.Count -1 -(int)Mathf.Floor(Random.value*6.99f)] = coffee_mug;
+				break;
+			}
+		}
+
+        /*
+        desk_obj = new List<Transform>{scissors, fan, closed_book};
+        table_obj = new List<Transform>{wine_flask, bottle, fruitbowl, dish};
+        stuff_obj = new List<Transform>{teddy_bear, soccer_ball, shoes, cat};
+        kitchen_obj = new List<Transform>{cutting_board, microwave, pineapple, moka, coffee_mug, knife_block, pan};
+		*/
+        
 		controlCam.SetTarget(targ);
 
 		// Low-priority but more extendible idea: create a LargeObject list like smalls, then fish from there.
@@ -203,24 +244,36 @@ public class Test_2_Living : MonoBehaviour {
 			child.content = null;
 			child.parent = root;
 			child.children = new List<Node>();
-			switch ((livingLarges)lv1[i]) {
-				case livingLarges.L_BOOKCASE:
+			switch ((fullLarges)lv1[i]) {
+				case fullLarges.L_BOOKCASE:
 					child.largeContent = buildBookcase();
 					break;
-				case livingLarges.L_DESK:
+				case fullLarges.L_DESK:
 					child.largeContent = buildDesk();
 					break;
-				case livingLarges.L_DOOR:
+				case fullLarges.L_DOOR:
 					child.largeContent = buildDoor();
 					break;
-				case livingLarges.L_STUFF:
+				case fullLarges.L_STUFF:
 					child.largeContent = buildStuff();
 					break;
-				case livingLarges.L_TABLE_CHAIRS:
+				case fullLarges.L_TABLE_CHAIRS:
 					child.largeContent = buildTable();
 					break;
-				case livingLarges.L_TV_AREA:
+				case fullLarges.L_TV_AREA:
 					child.largeContent = buildTVArea();
+					break;
+				case fullLarges.L_CABINET:
+					child.largeContent = buildCabinet();
+					break;
+				case fullLarges.L_CHAIR:
+					child.largeContent = buildChair();
+					break;
+				case fullLarges.L_MOD_KITCHEN:
+					child.largeContent = buildKitchen();
+					break;
+				default:
+					child.largeContent = new LargeObject(marker);
 					break;
 			}
 			root.children.Add(child);
@@ -231,22 +284,22 @@ public class Test_2_Living : MonoBehaviour {
 				grandchild.largeContent = null;
 				grandchild.parent = root.children[i];
 				grandchild.children = new List<Node>();
-				if((livingLarges)lv1[i] == livingLarges.L_DESK) {
+				if((fullLarges)lv1[i] == fullLarges.L_DESK) {
 					grandchild.content = Pop<Transform>(desk_obj);
 				}
-				else if((livingLarges)lv1[i] == livingLarges.L_TABLE_CHAIRS) {
+				else if((fullLarges)lv1[i] == fullLarges.L_TABLE_CHAIRS) {
 					grandchild.content = Pop<Transform>(table_obj);
 				}
-				else if((livingLarges)lv1[i] == livingLarges.L_STUFF) {
+				else if((fullLarges)lv1[i] == fullLarges.L_MOD_KITCHEN) {
+					grandchild.content = Pop<Transform>(kitchen_obj);
+				}
+				else if((fullLarges)lv1[i] == fullLarges.L_STUFF) {
 					grandchild.content = Pop<Transform>(stuff_obj);
 				}
-				
 				root.children[i].children.Add(grandchild);
 				//Debug.Log("Adding " + grandchild.content.name + " to " + child.largeContent.prefab.name);
 			}
 		}
-		
-		
 	}
 
 	// Utility functions for dealing with Vector3s
@@ -256,6 +309,17 @@ public class Test_2_Living : MonoBehaviour {
 
 	public Vector3 Absolute(Vector3 input) {
 		return new Vector3(Mathf.Abs(input.x), Mathf.Abs(input.y), Mathf.Abs(input.z));
+	}
+	
+	// Cartesian product of a Vector2 and an int to give a Vector3
+	public List<Vector3> Cartesian(List<Vector2> inp1, List<int> inp2) {
+		List<Vector3> output = new List<Vector3>();
+		for (int i = 0; i<inp1.Count; i++) {
+			for (int j = 0; j<inp2.Count; j++) {
+				output.Add(new Vector3(inp1[i].x, inp1[i].y, inp2[j]));
+			}
+		}
+		return output;
 	}
 
 	// In-place swap elements in a list
@@ -414,20 +478,45 @@ public class Test_2_Living : MonoBehaviour {
 		southwest.angle = Quaternion.Euler(0, 0, 0);
 		f.hotspots.Add(southwest);
 
+		Hotspot north = new Hotspot();
+		north.position.x = 0;
+		north.position.z = GetBounds(f.prefab).size.z/2;
+		north.direction = new Vector3(0, 0, -1);
+		north.angle = Quaternion.Euler(0, 0, 0);
+		f.hotspots.Add(north);
+		
 		Hotspot east = new Hotspot();
 		east.position.x = GetBounds(f.prefab).size.x/2;
+		// Slightly off center as massive things are on the northern wall
 		east.position.z = 0;
 		east.direction = new Vector3(-1, 0, 0);
 		east.angle = Quaternion.Euler(0, 0, 0);
 		f.hotspots.Add(east);
 		
+		Hotspot south = new Hotspot();
+		south.position.x = 0;
+		south.position.z = (-1)*GetBounds(f.prefab).size.z/2;
+		// Both decreasing
+		south.direction = new Vector3(0, 0, 1);
+		south.angle = Quaternion.Euler(0, 0, 0);
+		f.hotspots.Add(south);
+		
 		Hotspot west = new Hotspot();
 		west.position.x = (-1)*GetBounds(f.prefab).size.x/2;
-		west.position.z = 0;
+		// Slightly off center as massive things are on the northern wall
+		west.position.z = (-1)*GetBounds(f.prefab).size.z/6;
 		// Both decreasing
 		west.direction = new Vector3(1, 0, 0);
 		west.angle = Quaternion.Euler(0, 0, 0);
 		f.hotspots.Add(west);
+		
+		Hotspot center = new Hotspot();
+		center.position.x = -0.6f;
+		center.position.z = 0.2f;
+		// Both decreasing
+		center.direction = new Vector3(0, 0, 0);
+		center.angle = Quaternion.Euler(0, 0, 0);
+		f.hotspots.Add(center);
 
 		// The floor is already instantiated
 		f.instantiated = floor;
@@ -443,6 +532,30 @@ public class Test_2_Living : MonoBehaviour {
 		b.padding = Absolute(b.prefab.rotation*new Vector3(0.0f, 0.0f, 0.0f));
 		
 		return b;
+	}
+	
+	LargeObject buildCabinet() {
+		LargeObject c = new LargeObject();
+		c.hotspots = new List<Hotspot>(); //Nothing on top yet
+		c.prefab = cabinet;
+		c.padding = Absolute(c.prefab.rotation*new Vector3(0.2f, 0.0f, 0.0f));
+		return c;
+	}
+	
+	LargeObject buildChair() {
+		LargeObject c = new LargeObject();
+		c.hotspots = new List<Hotspot>(); //Nothing on top yet
+
+		Hotspot hsCenter = new Hotspot();
+		// Positioned determined by hand. Remember that it's aligned to the original orientation.
+		hsCenter.position = new Vector3(0.0f, 0.0f, -0.5842f);
+		hsCenter.direction = new Vector3(0, 0, 0);
+		hsCenter.angle = Quaternion.Euler(0, 180, 0);
+		c.hotspots.Add(hsCenter);
+
+		c.prefab = kitchen_chair;
+		c.padding = Absolute(c.prefab.rotation*new Vector3(0.3f, 0.0f, 0.0f));
+		return c;
 	}
 
 	LargeObject buildDesk() {
@@ -460,14 +573,14 @@ public class Test_2_Living : MonoBehaviour {
 		
 		Hotspot accessory = new Hotspot();
 		// Positioned determined by hand
-		accessory.position = new Vector3(0.06f, -0.1872f, 0.45f);
+		accessory.position = new Vector3(0.06f, -0.1872f, 0.55f);
 		accessory.direction = new Vector3(0, 0, 0);
 		accessory.angle = Quaternion.Euler(0, 0, 0);
 		d.hotspots.Add(accessory);
 		
 		Hotspot small = new Hotspot();
 		// Positioned determined by hand
-		small.position = new Vector3(0.06f, -0.1872f, -0.52f);
+		small.position = new Vector3(0.06f, -0.1872f, -0.7f);
 		small.direction = new Vector3(0, 0, 0);
 		small.angle = Quaternion.Euler(0, 00, 0);
 		d.hotspots.Add(small);
@@ -482,6 +595,66 @@ public class Test_2_Living : MonoBehaviour {
 		d.padding = Absolute(d.prefab.rotation*new Vector3(0.15f, 0.0f, 0.0f));
 		
 		return d;
+	}
+	
+	LargeObject buildKitchen() {
+		LargeObject k = new LargeObject();
+		k.hotspots = new List<Hotspot>();
+		// I'm only writing hotspots for this one.
+		// Can be changed if one places the hotspot generation inside the switch.
+		k.prefab = mod_kitchen;
+		k.padding = Absolute(k.prefab.rotation*new Vector3(0.0f, 0.0f, 0.0f));
+		
+		Hotspot cooker = new Hotspot();
+		// Positioned determined by hand
+		cooker.position = new Vector3(-1.721f, -0.211f, 0.484f);
+		cooker.direction = new Vector3(0, 0, 0);
+		cooker.angle = Quaternion.Euler(0, 0, 0);
+		k.hotspots.Add(cooker);
+		
+		Hotspot drawerright = new Hotspot();
+		// Positioned determined by hand
+		drawerright.position = new Vector3(-1.721f, -0.211f, -0.5f);
+		drawerright.direction = new Vector3(0, 0, 0);
+		drawerright.angle = Quaternion.Euler(0, 0, 0);
+		k.hotspots.Add(drawerright);
+		
+		Hotspot drawerleft = new Hotspot();
+		// Positioned determined by hand
+		drawerleft.position = new Vector3(-1.721f, -0.211f, 0.0f);
+		drawerleft.direction = new Vector3(0, 0, 0);
+		drawerleft.angle = Quaternion.Euler(0, 0, 0);
+		k.hotspots.Add(drawerleft);
+		
+		Hotspot whitecenter = new Hotspot();
+		// Positioned determined by hand
+		whitecenter.position = new Vector3(-1.833f, -0.211f, -1.0f);
+		whitecenter.direction = new Vector3(0, 0, 0);
+		whitecenter.angle = Quaternion.Euler(0, -45, 0);
+		k.hotspots.Add(whitecenter);
+		
+		Hotspot storage_r = new Hotspot();
+		// Positioned determined by hand
+		storage_r.position = new Vector3(-1.264f, -0.211f, -1.0f);
+		storage_r.direction = new Vector3(0, 0, 0);
+		storage_r.angle = Quaternion.Euler(0, -90, 0);
+		k.hotspots.Add(storage_r);
+		
+		Hotspot storage_l = new Hotspot();
+		// Positioned determined by hand
+		storage_l.position = new Vector3(-0.794f, -0.211f, -1.032f);
+		storage_l.direction = new Vector3(0, 0, 0);
+		storage_l.angle = Quaternion.Euler(0, -90, 0);
+		k.hotspots.Add(storage_l);
+		
+		Hotspot washer = new Hotspot();
+		// Positioned determined by hand
+		washer.position = new Vector3(-0.226f, -0.211f, -1.0f);
+		washer.direction = new Vector3(0, 0, 0);
+		washer.angle = Quaternion.Euler(0, -90, 0);
+		k.hotspots.Add(washer);
+		
+		return k;
 	}
 	
 	LargeObject buildStuff() {
@@ -529,28 +702,28 @@ public class Test_2_Living : MonoBehaviour {
 		// 6 hours looking from chairless side
 		Hotspot hs6h = new Hotspot();
 		// Positioned determined by hand
-		hs6h.position = new Vector3(0.084f, -0.2395f, -0.478f);
+		hs6h.position = new Vector3(0.084f, -0.1395f, -0.478f);
 		hs6h.direction = new Vector3(0, 0, 0);
 		hs6h.angle = Quaternion.Euler(0, 0, 0);
 		t.hotspots.Add(hs6h);
 		
 		Hotspot hs9h = new Hotspot();
 		// Positioned determined by hand
-		hs9h.position = new Vector3(-0.228f, -0.2395f, 0.046f);
+		hs9h.position = new Vector3(-0.228f, -0.1395f, 0.046f);
 		hs9h.direction = new Vector3(0, -0, 0);
 		hs9h.angle = Quaternion.Euler(0, -90, 0);
 		t.hotspots.Add(hs9h);
 		
 		Hotspot hs12h = new Hotspot();
 		// Positioned determined by hand
-		hs12h.position = new Vector3(0.0965f, -0.2395f, 0.493f);
+		hs12h.position = new Vector3(0.0965f, -0.1395f, 0.493f);
 		hs12h.direction = new Vector3(0, 0, 0);
 		hs12h.angle = Quaternion.Euler(0, 0, 0);
 		t.hotspots.Add(hs12h);
 		
 		Hotspot hs3h = new Hotspot();
 		// Positioned determined by hand
-		hs3h.position = new Vector3(0.37f, -0.2395f, 0.046f);
+		hs3h.position = new Vector3(0.37f, -0.1395f, 0.046f);
 		hs3h.direction = new Vector3(0, 0, 0);
 		hs3h.angle = Quaternion.Euler(0, 90, 0);
 		t.hotspots.Add(hs3h);
@@ -568,13 +741,6 @@ public class Test_2_Living : MonoBehaviour {
 		
 		return tv;
 	}
-	
-	/*HOTSPOTS
-	 * Desk - 2
-	 * Table - 4
-	 * Stuff - 2
-	 * TOTAL - 8 for 19 items (considering doubles, 16 without)
-	 */
 	 
 	void InstTree(Node n) {
 		if(n.parent != null) {
@@ -596,6 +762,7 @@ public class Test_2_Living : MonoBehaviour {
 					InstTree(n.children[i]);
 				}
 			} else if (n.content != null && n.largeContent == null) {
+				//Debug.Log(n.parent.largeContent.prefab.name + " " + index.ToString() + " - " + n.content.name);
 				//Instantiate(marker,
 				Instantiate(n.content,
 					SnapToHotspot(n.parent.largeContent, n.content, index, n.parent.largeContent.hotspots[index].angle*
@@ -615,10 +782,12 @@ public class Test_2_Living : MonoBehaviour {
 		if (!StaticValues.initialized) {
 			StaticValues.timestamp = System.DateTime.Now.ToString("yyyy_MM_dd_HH_mm");
 			StaticValues.runCount = 0;
-			StaticValues.sw = new StreamWriter(Application.dataPath + "/../Logs/Test_2_Living/Test_2_LivingRoom_" + StaticValues.timestamp + ".json");
-			StaticValues.resolutions = new List<Vector2> {new Vector2(40, 60), new Vector2(60, 90), new Vector2(80, 120), new Vector2(120, 150)};
-			StaticValues.runsPerRes = runs/StaticValues.resolutions.Count;
-			StaticValues.tested = new List<Transform>();
+			StaticValues.sw = new StreamWriter(Application.dataPath + "/../Logs/Test_3_Full/Test_3_FullRoom_" + StaticValues.timestamp + ".json");
+			StaticValues.resolutions = new List<Vector2> {new Vector2(40, 60), new Vector2(60, 90), new Vector2(80, 120)};
+			StaticValues.angles = new List<int> {45, 35, 25, 15};
+			StaticValues.configurations = Cartesian(StaticValues.resolutions, StaticValues.angles);
+			StaticValues.lastPosition = 999;
+            StaticValues.iterVal = iterationVal;
 			
 			begin = System.DateTime.Now;
 			
@@ -628,7 +797,8 @@ public class Test_2_Living : MonoBehaviour {
 			StaticValues.sw.WriteLine("\t\t\"subject\" : \"" + subject + "\",");
 			StaticValues.sw.WriteLine("\t\t\"date\" : \"" + begin.ToString("yyyy-MM-dd") + "\",");
 			StaticValues.sw.WriteLine("\t\t\"time\" : \"" + begin.ToString("HH:mm:ss") + "\",");
-			StaticValues.sw.WriteLine("\t\t\"canny\" : " + ((leftEye.canny && rightEye.canny)? "1" : "0" + ","));
+			StaticValues.sw.WriteLine("\t\t\"canny\" : " + ((leftEye.canny && rightEye.canny)? "1" : "0") + ",");
+            StaticValues.sw.WriteLine("\t\t\"noisy\" : " + ((leftEye.brokenChance > float.Epsilon && rightEye.brokenChance > float.Epsilon)? "1" : "0") + ",");
 			StaticValues.sw.WriteLine("\t\t\"experiments\" : [");
 		
 			StaticValues.initialized = true;
@@ -637,76 +807,90 @@ public class Test_2_Living : MonoBehaviour {
 	}
 	// Use this for initialization
 	void Start () {
-		Cursor.lockState = CursorLockMode.Locked;
+		//Cursor.lockState = CursorLockMode.Locked;
 		
-		state = Test_2FStates.PREPARATION;
+		state = Test_3FStates.PREPARATION;
 		Node root = new Node();
 		BuildTree(root);
 		InstTree(root);
+        
+		VRController = CameraOnAStick.GetInstance().transform;
+		VRController.position = new Vector3(3.0f, -0.5f, -2.5f);
+		VRController.GetComponent<CameraOnAStick>().adjustment = new Vector3(0, 0, 0);
 		
-		VRController = RigidbodyFirstPersonController.GetInstance().transform;
-		leftEye = VRController.Find("Fove Interface").Find("FOVE Eye (Left)").GetComponent<applyShader>();
-		rightEye = VRController.Find("Fove Interface").Find("FOVE Eye (Right)").GetComponent<applyShader>();
-		VRController.position = new Vector3(-0.894f, -1.102f, -0.711f);
-		
-		// I can maybe add a second FOVE interface with a "Please Wait" screen
-		leftEye.SetBlackening(true);
-		rightEye.SetBlackening(true);
-				
 		// It would be better to have an input scheme but this is effective until we get a controller
 		controlCam.transform.parent.GetComponent<Pivot_rotate>().active = true;
-		VRController.GetComponent<RigidbodyFirstPersonController>().enabled = false;
+		VRController.GetComponent<CameraOnAStick>().enabled = false;
 	}
 
 	// Update is called once per frame
 	void Update () {
+		
+		if (Time.timeSinceLevelLoad < 0.1f){
+			// Doing it on start has weird effects.
+			leftEye = VRController.Find("Fove Interface").Find("FOVE Eye (Left)").GetComponent<applyShader>();
+			rightEye = VRController.Find("Fove Interface").Find("FOVE Eye (Right)").GetComponent<applyShader>();
+			leftEye.SetBlackening(true);
+			rightEye.SetBlackening(true);
+		}
 		switch (state) {
-			case Test_2FStates.PREPARATION:
+			case Test_3FStates.PREPARATION:
 				// Possibly allow to rotate the object or rotate it automatically
 				
-				/*
-				 *** TODO *** TODO *** TODO ***
-				 * PROBLEM WITH THE CONTROL SCHEME:
-				 * The user is using a keyboard/joystick to move
-				 * The controller needs a keyboard to evaluate the answers.
-				 * Without a joystick, there's a conflict.
-				 * With a joystick, I need to remember to disable the controller during PREPARATION
-				 *
-				 * Alternatively, making a separate control scheme: the controller has WASD to rotate the preview and the
-				 * spacebar to activate the test, the subject has the mouse to give an answer and the arrows to move.
-				 */
-				if ((StaticValues.runCount)%StaticValues.runsPerRes == 0 && StaticValues.resolutions.Count > 0 && !resUpdated) {
-					currRes = Pop(StaticValues.resolutions);
+				if (StaticValues.configurations.Count == StaticValues.resolutions.Count * StaticValues.angles.Count) {
+					StaticValues.sw.WriteLine("\t\t\t{");
+                    // This is for doing multiple iterations WITHOUT a pause in the middle
+					//StaticValues.sw.WriteLine("\t\t\t\t\"iteration\" : \"" + (StaticValues.runCount+1).ToString() + "\",");
+                    // This is with a pause in the middle, adding the iteration by hand.
+                    StaticValues.sw.WriteLine("\t\t\t\t\"iteration\" : \"" + StaticValues.iterVal + "\",");
+                    StaticValues.iterVal++;
+					StaticValues.sw.WriteLine("\t\t\t\t\"runs\" : [");
+				}
+				
+				if (StaticValues.configurations.Count > 0 && !resUpdated) {
+					Vector3 tmp = Pop(StaticValues.configurations);
+					currRes = new Vector2(tmp.x, tmp.y);
+					
 					if (leftEye != null && rightEye != null) {
 						leftEye.SetResolution(currRes);
+						leftEye.SetViewingAngle(tmp.z);
 						rightEye.SetResolution(currRes);
+						rightEye.SetViewingAngle(tmp.z);
 					}
-					if (StaticValues.runCount > 0) {
-						// runs
-						StaticValues.sw.WriteLine("\t\t\t\t]");
-						// set
-						StaticValues.sw.WriteLine("\t\t\t},");
-					}
-					StaticValues.sw.WriteLine("\t\t\t{");
-					StaticValues.sw.WriteLine("\t\t\t\t\"resolution\" : \"" + currRes.x.ToString() + "/" + currRes.y.ToString() + "\",");
-					StaticValues.sw.WriteLine("\t\t\t\t\"runs\" : [");
+					StaticValues.sw.WriteLine("\t\t\t\t\t{");
+					StaticValues.sw.WriteLine("\t\t\t\t\t\t\"resolution\" : \"" + currRes.x.ToString() + "/" + currRes.y.ToString() + "\",");
+					StaticValues.sw.WriteLine("\t\t\t\t\t\t\"angle\" : \"" + tmp.z.ToString() + "\",");
 					resUpdated = true;
+					
+					Debug.Log((StaticValues.runCount+1).ToString() + " - " + (12-StaticValues.configurations.Count).ToString());
 				}
 				
 				if (Input.GetKeyDown(KeyCode.Space)) {
-					state = Test_2FStates.SIMULATION;
+					state = Test_3FStates.SIMULATION;
 					begin = System.DateTime.Now;
 					controlCam.transform.Find("Canvas").Find("lower").GetComponent<Text>().text = "";
 					controlCam.transform.parent.GetComponent<Pivot_rotate>().active = false;
-					VRController.GetComponent<RigidbodyFirstPersonController>().enabled = true;
+					VRController.GetComponent<CameraOnAStick>().enabled = true;
 					leftEye.SetBlackening(false);
 					rightEye.SetBlackening(false);
 				}
 			break;
 			
-			case Test_2FStates.SIMULATION:
-				if(Input.GetAxis("Confirm") != 0) {
-					controlCam.transform.Find("Canvas").Find("lower").GetComponent<Text>().text = "Press Y if CORRECT,\nN if WRONG";
+			case Test_3FStates.SIMULATION:
+				// The examinator takes the time, confirming the answer once the correct one is reached.
+				//deltaTime += (Time.deltaTime - deltaTime) * 0.1f;
+				//float fps = 1.0f / deltaTime;
+				//Debug.Log(fps);
+				
+				if (Input.GetKeyDown(KeyCode.Space)) {
+					controlCam.transform.Find("Canvas").Find("lower").GetComponent<Text>().text = "Enter the accuracy";
+					/*
+					infield = controlCam.transform.Find("Canvas").Find("accuracy").GetComponent<InputField>();
+					infield.gameObject.SetActive(true);
+					infield.ActivateInputField();
+					infield.Select();
+					*/
+
 					end = System.DateTime.Now;
 					elapsed = (end - begin).ToString();
 					string[] tmp = elapsed.Split(':');
@@ -714,53 +898,52 @@ public class Test_2_Living : MonoBehaviour {
 					
 					leftEye.SetBlackening(true);
 					rightEye.SetBlackening(true);
-					state = Test_2FStates.EVALUATION;
+					state = Test_3FStates.EVALUATION;
 				}
 			break;
 			
-			case Test_2FStates.EVALUATION:
-				if (Input.GetKeyDown(KeyCode.Y) || Input.GetKeyDown(KeyCode.N)) {
-					state = Test_2FStates.PREPARATION;
-					
-					controlCam.transform.Find("Canvas").Find("lower").GetComponent<Text>().text = "Press Space to start";
-					
-					StaticValues.sw.WriteLine("\t\t\t\t\t{");
-					// Child 2 is the instantiated clone
-					StaticValues.sw.WriteLine("\t\t\t\t\t\t\"name\" : \"" + targ.name.Split('(')[0] + "\",");
-					StaticValues.sw.WriteLine("\t\t\t\t\t\t\"result\" : \"" + (Input.GetKeyDown(KeyCode.Y) ? "CORRECT" : "WRONG") + "\",");
-					StaticValues.sw.WriteLine("\t\t\t\t\t\t\"elapsed\" : \"" + elapsed + "\"");
-					if ((StaticValues.runCount)%StaticValues.runsPerRes != 0) {
-						StaticValues.sw.WriteLine("\t\t\t\t\t},");
+			case Test_3FStates.EVALUATION:
+				controlCam.transform.Find("Canvas").Find("lower").GetComponent<Text>().text = "Press Space to start";
+				
+				// Child 2 is the instantiated clone
+				StaticValues.sw.WriteLine("\t\t\t\t\t\t\"name\" : \"" + targ.name.Split('(')[0] + "\",");
+				//StaticValues.sw.WriteLine("\t\t\t\t\"result\" : \"" + (infield.GetComponent<InputEditor>().written) + "\",");
+				StaticValues.sw.WriteLine("\t\t\t\t\t\t\"elapsed\" : \"" + elapsed + "\"");
+				if(StaticValues.configurations.Count == 0) {
+					StaticValues.sw.WriteLine("\t\t\t\t\t}");
+					StaticValues.sw.WriteLine("\t\t\t\t]"); //sets
+					if(StaticValues.runCount == runs-1) {
+						StaticValues.sw.WriteLine("\t\t\t}"); //experiments
 					} else {
-						StaticValues.sw.WriteLine("\t\t\t\t\t}");
+						StaticValues.sw.WriteLine("\t\t\t},"); //experiments
 					}
-					elapsed = "";
-					Quit();
+				} else {
+				StaticValues.sw.WriteLine("\t\t\t\t\t},");
 				}
+				elapsed = "";
+				Quit();
 			break;
 		}
 	}
 	
 	void Quit() {
-		if (StaticValues.runCount == runs-1) {
+		if (StaticValues.runCount == runs-1 && StaticValues.configurations.Count == 0) {
 			#if UNITY_EDITOR
 				UnityEditor.EditorApplication.isPlaying = false;
 			#else
 				Application.Quit();
 			#endif
 		} else {
-			StaticValues.runCount++;
-			resUpdated = false;
-			SceneManager.LoadScene("Test_2_Living");
+			if (StaticValues.configurations.Count == 0) {
+				StaticValues.configurations = Cartesian(StaticValues.resolutions, StaticValues.angles);
+				StaticValues.runCount++;
+			}
+			SceneManager.LoadScene("Test_3_Full");
 		}
 	}
 	
 	// In case of accidental exit
 	void OnApplicationQuit() {
-		// runs
-		StaticValues.sw.WriteLine("\t\t\t\t]");
-		// set
-		StaticValues.sw.WriteLine("\t\t\t}");
 		// experiments
 		StaticValues.sw.WriteLine("\t\t]");
 		// test
@@ -768,6 +951,6 @@ public class Test_2_Living : MonoBehaviour {
 		// main object
 		StaticValues.sw.WriteLine("}");
 		StaticValues.sw.Close();
-		System.Diagnostics.Process.Start(Application.dataPath + "/../Logs/Test_2_Living/Test_2_LivingRoom_" + StaticValues.timestamp + ".json");
+		//System.Diagnostics.Process.Start(Application.dataPath + "/../Logs/Test_3_Full/Test_3_FullRoom_" + StaticValues.timestamp + ".json");
 	}
 }

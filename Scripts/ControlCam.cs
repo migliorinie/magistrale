@@ -13,10 +13,14 @@ public class ControlCam : MonoBehaviour {
 		toBeFound.localPosition = Vector3.zero;
 		ScaleChildToAngle(35.0f);
 		toBeFound.rotation = Quaternion.Euler(toBeFound.rotation.eulerAngles + new Vector3(0, 90, 0));
-		this.transform.Find("Canvas").Find("upper").GetComponent<Text>().text += toBeFound.name.Split('(')[0];
+		this.transform.Find("Canvas").Find("upper").GetComponent<Text>().text = "Target: " + toBeFound.name.Split('(')[0];
 		// Now that it's positioned, we can detach and rotate
 		toBeFound.parent = null;
 		}
+	
+	public void Clear() {
+		Destroy(toBeFound.gameObject);
+	}
 	
 	// Utility functions for dealing with Vector3
 	public Vector3 ElemwiseProduct(Vector3 first, Vector3 second) {

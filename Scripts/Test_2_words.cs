@@ -5,77 +5,45 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class Test_1 : MonoBehaviour {
-	
-	public Transform ac_guitar;
-	public Transform axe;
-	public Transform banana;
-	public Transform bottle;
-	public Transform cat;
-	public Transform chef_knife;
-	public Transform cherry;
-	public Transform coffee_mug;
-	public Transform coffee_table;
-	public Transform cola;
-	public Transform dog;
-	public Transform ele_guitar;
-	public Transform extinguisher;
-	public Transform fan;
-	public Transform fedora;
-	public Transform fish;
-	public Transform fruitbowl;
-	public Transform hammer;
-	public Transform heart;
-	public Transform horse;
-	public Transform jug;
-	public Transform kitchen_chair;
-	public Transform kitchen_table;
-	public Transform lamp;
-	public Transform laptop;
-	public Transform lotus_flower;
-	public Transform microwave;
-	public Transform moka;
-	public Transform mushroom;
-	public Transform pan;
-	public Transform pear;
-	public Transform pinapple;
-	public Transform pliers;
-	public Transform pot_small;
-	public Transform printer;
-	public Transform pumpkin;
-	public Transform rose;
-	public Transform scissors;
-	public Transform shoe;
-	public Transform star;
-	public Transform teacup;
-	public Transform teddy_bear;
-	public Transform traffic_cone;
-	public Transform tree;
-	public Transform trumpet;
-	public Transform wine_flask;
-	public Transform working_boot;
-	public Transform wrench;
+public enum Language {
+	ITA,
+	FRA,
+	ENG
+}
+
+public class Test_2_words : MonoBehaviour {
 	
 	[Space(10)]
-	public Transform pivot;
 	public applyShader leftEye;
 	public applyShader rightEye;
 	public Camera controlCam;
+	public Text targetText;
+	
+	[Space(10)]
+	public Language lang;
+	[Tooltip("The amount of iterations FOR EACH RESOLUTION")]
+	public int runsPerRes = 5;
+	public int runsPerAngle = 20;
+	//public int timeLimit = 5;
 	
 	[Space(10)]
 	[Range(0.0f, 90.0f)]
-	public float fixedAngle = 20f; // in degrees
+	[Tooltip("VERTICAL maximum angle.")]
+	public float fixedAngle = 3f; // in degrees
+	private float initAngle;
 	
 	[Space(10)]
 	public string subject;
 	
 	private float deltaTime;
-	private List<Transform> items;
-	private Transform instantiated;
-	private int runsPerRes;
+	private List<string> words;
 	private int runCount;
 	private List<Vector2> resolutions;
 	private Vector2 currRes;
+	//private bool timeout;
+	//private IEnumerator timer;
+	
+	private List<float> fpsColl;
 	
 	private StreamWriter sw;
 	
@@ -85,7 +53,6 @@ public class Test_1 : MonoBehaviour {
 	private string elapsed;
 	private bool answered;
 	private bool readyToStart;
-	private List<float> fpsColl;
 	
 	// Utility functions for dealing with Vector3s
 	// To make it prettier I could save these statically somewhere, or have these classes inherit something.
@@ -99,22 +66,6 @@ public class Test_1 : MonoBehaviour {
 	
 	float ToRad(float deg) {
 		return deg/180*3.14159f;
-	}
-	
-	Bounds GetBounds(Transform obj) {
-		Renderer renderer = obj.GetComponent<Renderer>();
-		Bounds combinedBounds;
-		if(renderer != null) {// If the object has a renderer, it's not a group.
-			combinedBounds = renderer.bounds;
-		}
-		else {
-			combinedBounds = new Bounds(obj.position, new Vector3(0, 0, 0));
-		}
-		// There are objects with a renderer whose children are objects with a renderer
-		foreach (Transform child in obj.transform) {
-			combinedBounds.Encapsulate(GetBounds(child));
-		}
-		return combinedBounds;
 	}
 	
 	// In-place swap elements in a list
@@ -144,14 +95,22 @@ public class Test_1 : MonoBehaviour {
 		}
 	}
 
-	void ScaleToAngle(Transform t, float f) {
-		float diagonal = GetBounds(t).size.magnitude;
-		float target = Mathf.Abs(2f*Mathf.Sin(ToRad(f)/2f)*pivot.Find("Fove Interface").transform.position.magnitude);
-		Bounds origBounds = GetBounds(t);
-		t.localScale = t.localScale*(target/diagonal);
-		t.position = ElemwiseProduct(origBounds.center, t.localScale)*(-1f);
+	void ScaleTextToAngle(Text t, string s, float f) {
+		float targetHeight = Mathf.Abs(2f*Mathf.Sin(ToRad(f)/2f)*(GameObject.Find("Fove Interface").transform.position - t.transform.position).magnitude);
+		int targetSize = (int)Mathf.Min(Mathf.Floor(targetHeight*24f/13f), 64); // Figures are determined empirically
+		t.fontSize = targetSize;
+		//Note: the font size is apparently capped at 32
 	}
-		
+	
+	/*
+	private IEnumerator Timeout(float seconds) {
+		//while(true) {
+			yield return new WaitForSeconds(seconds);
+			timeout = true;
+		//}
+	}
+	*/
+	
 	void Quit() {
 		#if UNITY_EDITOR
 			UnityEditor.EditorApplication.isPlaying = false;
@@ -162,30 +121,45 @@ public class Test_1 : MonoBehaviour {
 	
 	// Use this for initialization
 	void Start () {
+		initAngle = fixedAngle;
 		fpsColl = new List<float>();
 		Cursor.lockState = CursorLockMode.Locked;
 		controlCam.aspect = 1.33333f;
 		
-		// Hardcoding? At this time of year, at this time of day, at this part of the country, localized entirely within your MonoBehaviour?!
-		items = new List<Transform> {ac_guitar, axe, banana, bottle, cat, chef_knife, cherry, coffee_mug, coffee_table, cola, dog, ele_guitar,
-									extinguisher, fan, fedora, fish, fruitbowl, hammer, heart, horse, jug, kitchen_chair, kitchen_table, lamp,
-									laptop, lotus_flower, microwave, moka, mushroom, pan, pear, pinapple, pliers, pot_small, printer, pumpkin,
-									rose, scissors, shoe, star, teacup, teddy_bear, traffic_cone, tree, trumpet, wine_flask, working_boot, wrench};
+		// Hardcoding? At this time of year, at this time of day,
+		// in this part of the country, localized entirely within your MonoBehaviour?!
+		string addr = "";
+		switch(lang) {
+			case Language.ITA:
+				addr = "Assets/Custom/commonITA.txt";
+				break;
+			case Language.FRA:
+				addr = "Assets/Custom/commonFRA.txt";
+				break;
+			case Language.ENG:
+				addr = "Assets/Custom/commonENG.txt";
+				break;
+		}
+		
+		words = new List<string> (System.IO.File.ReadAllLines(addr));
 		resolutions = new List<Vector2> {new Vector2(40, 60), new Vector2(60, 90), new Vector2(80, 120), new Vector2(120, 150)};
-		runsPerRes = items.Count/resolutions.Count;
+		int len = runsPerRes*runsPerAngle*resolutions.Count;
+		
 		runCount = 0;
 		
-		Shuffle<Transform>(items);
-		Transform t = Pop(items);
-		instantiated = Instantiate(t, new Vector3(0.0f, 0.0f, 0.0f), t.rotation);
-		ScaleToAngle(instantiated, fixedAngle);
+		//Shuffle<string>(words);
+		words = words.GetRange(0, len);
+		
+		string s = Pop(words);
+		targetText.text = s;
+		ScaleTextToAngle(targetText, s, fixedAngle);
 		
 		begin = System.DateTime.Now;
 		answered = false;
 		readyToStart = false;
 		
 		timestamp = begin.ToString("yyyy_MM_dd_HH_mm");
-		sw = new StreamWriter(Application.dataPath + "/../Logs/Test_1/Test_1_" + timestamp + ".json");
+		sw = new StreamWriter(Application.dataPath + "/../Logs/Test_2_words/Test_2_" + timestamp + ".json");
 		
 		// C#'s JSON serializer is just unpleasant. I'll analyze this data with Python anyways
 		sw.WriteLine("{");
@@ -200,6 +174,12 @@ public class Test_1 : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
+		if(!answered) {
+			deltaTime += (Time.deltaTime - deltaTime) * 0.1f;
+			float fps = 1.0f / deltaTime;
+			//Debug.Log(fps);
+			fpsColl.Add(fps);
+		}
 		
 		// Can't do it at start or I'd have a race condition
 		if (runCount == 0) {
@@ -225,14 +205,27 @@ public class Test_1 : MonoBehaviour {
 				leftEye.SetBlackening(false);
 				rightEye.SetBlackening(false);
 				
+				//timeout = false;
+				//timer = Timeout((float)timeLimit);
+				//StartCoroutine(timer);
+				
 				controlCam.transform.Find("Canvas").Find("Text").GetComponent<Text>().text = "";
 			}
 		} else {
-			if(!answered) {
-				deltaTime += (Time.deltaTime - deltaTime) * 0.1f;
-				float fps = 1.0f / deltaTime;
-				fpsColl.Add(fps);
-			}
+			// Time's up
+			/*
+			if(timeout && !answered) {
+				end = System.DateTime.Now;
+				elapsed = (end - begin).ToString();
+				string[] tmp = elapsed.Split(':');
+				elapsed = tmp[1] + ":" + tmp[2].Substring(0, 6);
+				
+				leftEye.SetBlackening(true);
+				rightEye.SetBlackening(true);
+				
+				//StopCoroutine(timer);
+			}*/
+			
 			// "Answer button". Can compare to zero because of dead zone.
 			if (Input.GetAxis("Confirm") != 0 && !answered) {
 				answered = true;
@@ -246,37 +239,37 @@ public class Test_1 : MonoBehaviour {
 				rightEye.SetBlackening(true);
 			}
 			
-			// To change the resolution: get the script and add a counter in module. Possibly group items under resolution.
+			// To change the resolution: get the script and add a counter in module. Possibly group words under resolution.
 			// HOWEVER, first I need some more props.
-			if ((Input.GetKeyDown(KeyCode.Y) || Input.GetKeyDown(KeyCode.N)) && answered) {
+			if (((Input.GetKeyDown(KeyCode.Y) || Input.GetKeyDown(KeyCode.N)) && answered)) {
 				//begin = System.DateTime.Now;
 				answered = false;
 				// item
 				sw.WriteLine("\t\t\t\t\t{");
-				sw.WriteLine("\t\t\t\t\t\t\"name\" : \"" + instantiated.name.Split('(')[0] + "\",");
+				sw.WriteLine("\t\t\t\t\t\t\"name\" : \"" + targetText.text + "\",");
 				sw.WriteLine("\t\t\t\t\t\t\"result\" : \"" + (Input.GetKeyDown(KeyCode.Y) ? "CORRECT" : "WRONG") + "\",");
-				sw.WriteLine("\t\t\t\t\t\t\"elapsed\" : \"" + elapsed + "\"");
-				if ((runCount)%runsPerRes != 0) {
+				sw.WriteLine("\t\t\t\t\t\t\"elapsed\" : \"" + elapsed + "\",");
+				sw.WriteLine("\t\t\t\t\t\t\"angle\" : \"" + fixedAngle + "\"");
+				if ((runCount)%(runsPerRes*runsPerAngle) != 0) {
 					sw.WriteLine("\t\t\t\t\t},");
 				} else {
 					sw.WriteLine("\t\t\t\t\t}");
 				}
 				elapsed = "";
 				
-				if(items.Count > 0) {
+				if(words.Count > 0) {
 					// Create a new item
-					if((runCount)%runsPerRes == 0 && resolutions.Count > 0) {
-						
+					if((runCount)%(runsPerRes*runsPerAngle) == 0 && resolutions.Count > 0) {
 						Debug.Log(currRes);
 						Debug.Log(fpsColl.Average());
 						fpsColl = new List<float>();
 						
 						currRes = Pop(resolutions);
-						
 						if (leftEye != null && rightEye != null) {
 							leftEye.SetResolution(currRes);
 							rightEye.SetResolution(currRes);
 						}
+						fixedAngle = initAngle;
 						// runs
 						sw.WriteLine("\t\t\t\t]");
 						// sets
@@ -286,18 +279,20 @@ public class Test_1 : MonoBehaviour {
 						sw.WriteLine("\t\t\t\t\"resolution\" : \"" + currRes.x.ToString() + "/" + currRes.y.ToString() + "\",");
 						sw.WriteLine("\t\t\t\t\"runs\" : [");
 					}
+					else if((runCount)%runsPerAngle == 0) {
+						fixedAngle += 1;
+					}
+					Debug.Log(runCount);
 					runCount++;
 					
 					readyToStart = false;
 					controlCam.transform.Find("Canvas").Find("Text").GetComponent<Text>().text = "Press Space to start";
 					
-					Destroy(instantiated.gameObject);
-					Transform t = Pop(items);
-					instantiated = Instantiate(t, new Vector3(0.0f, 0.0f, 0.0f), t.rotation);
-					ScaleToAngle(instantiated, fixedAngle);
-					pivot.rotation = Quaternion.identity;
+					string s = Pop(words);
+					targetText.text = s;
+					ScaleTextToAngle(targetText, s, fixedAngle);
 				} else {
-				
+					
 					Debug.Log(currRes);
 					Debug.Log(fpsColl.Average());
 					fpsColl = new List<float>();
@@ -321,6 +316,6 @@ public class Test_1 : MonoBehaviour {
 		sw.WriteLine("}");
 		sw.Close();
 		
-		System.Diagnostics.Process.Start(Application.dataPath + "/../Logs/Test_1/Test_1_" + timestamp + ".json");
+		//System.Diagnostics.Process.Start(Application.dataPath + "/../Logs/Test_2_words/Test_2_" + timestamp + ".json");
 	}
 }

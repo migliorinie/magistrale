@@ -5,77 +5,91 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class Test_1 : MonoBehaviour {
+public class Test_3_Surface : MonoBehaviour {
 	
-	public Transform ac_guitar;
-	public Transform axe;
 	public Transform banana;
-	public Transform bottle;
-	public Transform cat;
 	public Transform chef_knife;
-	public Transform cherry;
 	public Transform coffee_mug;
-	public Transform coffee_table;
 	public Transform cola;
-	public Transform dog;
-	public Transform ele_guitar;
-	public Transform extinguisher;
-	public Transform fan;
-	public Transform fedora;
 	public Transform fish;
-	public Transform fruitbowl;
-	public Transform hammer;
-	public Transform heart;
-	public Transform horse;
-	public Transform jug;
-	public Transform kitchen_chair;
-	public Transform kitchen_table;
-	public Transform lamp;
-	public Transform laptop;
+	public Transform glasses;
+	public Transform lightbulb;
 	public Transform lotus_flower;
-	public Transform microwave;
 	public Transform moka;
 	public Transform mushroom;
-	public Transform pan;
-	public Transform pear;
-	public Transform pinapple;
+	public Transform palette;
+	public Transform photo_camera;
 	public Transform pliers;
+	public Transform rose;
+	public Transform scissors;
+	public Transform teacup;
+	public Transform tie;
+	
+	[Space(10)]
+	public Transform axe;
+	public Transform bottle;
+	public Transform cat;
+	public Transform extinguisher;
+	public Transform fedora;
+	public Transform hammer;
+	public Transform jug;
+	public Transform lamp;
+	public Transform shoe;
+	public Transform skull;
+	public Transform teddy_bear;
+	public Transform violin;
+	public Transform working_boots;
+
+	[Space(10)]
+	public Transform coffee_table;
+	public Transform dog;
+	public Transform fan;
+	public Transform jacket;
+	public Transform jeans;
+	public Transform laptop;
+	public Transform microwave;
 	public Transform pot_small;
 	public Transform printer;
 	public Transform pumpkin;
-	public Transform rose;
-	public Transform scissors;
-	public Transform shoe;
-	public Transform star;
-	public Transform teacup;
-	public Transform teddy_bear;
+	public Transform soccer_ball;
 	public Transform traffic_cone;
-	public Transform tree;
 	public Transform trumpet;
 	public Transform wine_flask;
-	public Transform working_boot;
-	public Transform wrench;
+
+	[Space(10)]
+	public Transform marksphere;
 	
 	[Space(10)]
-	public Transform pivot;
 	public applyShader leftEye;
 	public applyShader rightEye;
-	public Camera controlCam;
+	public Camera viewCam;
+	public ControlCam controlCam;
 	
 	[Space(10)]
-	[Range(0.0f, 90.0f)]
-	public float fixedAngle = 20f; // in degrees
+	public int rows = 3;
+	public int columns = 4;
+	[Range(0, 360)]
+	public int arcWidth = 120;
 	
 	[Space(10)]
+	public int runsPerRes = 5;
 	public string subject;
 	
 	private float deltaTime;
-	private List<Transform> items;
-	private Transform instantiated;
-	private int runsPerRes;
+	private List<Transform> lightItems;
+	private List<Transform> oneHandedItems;
+	private List<Transform> twoHandedItems;
+	private List<Transform> instantiated;
+	private Transform targ;
+	
+	private int len;
 	private int runCount;
 	private List<Vector2> resolutions;
 	private Vector2 currRes;
+	//private bool timeout;
+	//private IEnumerator timer;
+	
+	private List<float> fpsColl;
 	
 	private StreamWriter sw;
 	
@@ -85,7 +99,6 @@ public class Test_1 : MonoBehaviour {
 	private string elapsed;
 	private bool answered;
 	private bool readyToStart;
-	private List<float> fpsColl;
 	
 	// Utility functions for dealing with Vector3s
 	// To make it prettier I could save these statically somewhere, or have these classes inherit something.
@@ -99,22 +112,6 @@ public class Test_1 : MonoBehaviour {
 	
 	float ToRad(float deg) {
 		return deg/180*3.14159f;
-	}
-	
-	Bounds GetBounds(Transform obj) {
-		Renderer renderer = obj.GetComponent<Renderer>();
-		Bounds combinedBounds;
-		if(renderer != null) {// If the object has a renderer, it's not a group.
-			combinedBounds = renderer.bounds;
-		}
-		else {
-			combinedBounds = new Bounds(obj.position, new Vector3(0, 0, 0));
-		}
-		// There are objects with a renderer whose children are objects with a renderer
-		foreach (Transform child in obj.transform) {
-			combinedBounds.Encapsulate(GetBounds(child));
-		}
-		return combinedBounds;
 	}
 	
 	// In-place swap elements in a list
@@ -143,15 +140,76 @@ public class Test_1 : MonoBehaviour {
 			return default(T);
 		}
 	}
-
-	void ScaleToAngle(Transform t, float f) {
+	
+	/*
+	private IEnumerator Timeout(float seconds) {
+		//while(true) {
+			yield return new WaitForSeconds(seconds);
+			timeout = true;
+		//}
+	}
+	*/
+	
+	Bounds GetBounds(Transform obj) {
+		Renderer renderer = obj.GetComponent<Renderer>();
+		Bounds combinedBounds;
+		if(renderer != null) {// If the object has a renderer, it's not a group.
+			combinedBounds = renderer.bounds;
+		}
+		else {
+			combinedBounds = new Bounds(obj.position, new Vector3(0, 0, 0));
+		}
+		// There are objects with a renderer whose children are objects with a renderer
+		foreach (Transform child in obj.transform) {
+			combinedBounds.Encapsulate(GetBounds(child));
+		}
+		return combinedBounds;
+	}
+	
+	void ScaleToAngle(Transform t, float f, Vector3 dest) {
 		float diagonal = GetBounds(t).size.magnitude;
-		float target = Mathf.Abs(2f*Mathf.Sin(ToRad(f)/2f)*pivot.Find("Fove Interface").transform.position.magnitude);
+		float target = Mathf.Abs(2f*Mathf.Sin(ToRad(f)/2f)*dest.magnitude);
 		Bounds origBounds = GetBounds(t);
 		t.localScale = t.localScale*(target/diagonal);
 		t.position = ElemwiseProduct(origBounds.center, t.localScale)*(-1f);
 	}
+	
+	Transform CreateObjects() {
+		int cat = (int)Mathf.Floor(Random.value*(3f));
+		List<Transform> itlist;
+		switch(cat) {
+		case 0: {
+			itlist = lightItems;
+			break;}
+		case 1:{
+			itlist = oneHandedItems;
+			break;}
+		case 2:{
+			itlist = twoHandedItems;
+			break;}
+		default:{
+			Debug.Log("Error in the random values!");
+			itlist = new List<Transform>();
+			break;}
+		}
+		itlist = itlist.GetRange(0, rows*columns);
 		
+		// Set up the list of targeted
+		Transform target = itlist[(int)Mathf.Floor(Random.value*(rows*columns))];
+		Shuffle(itlist);
+		
+		float arc = arcWidth/(columns+1);
+		for(int i = 0; i < rows*columns; i++) {
+			Vector3 pos = new Vector3(Mathf.Cos(ToRad((270f - (360f-arcWidth)/2) - arc*(i%columns+1))), Mathf.Sin(ToRad(15f*((i/columns)-(rows/2)))), Mathf.Sin(ToRad((270f - (360f-arcWidth)/2) - arc*(i%columns+1))))*6;
+			Transform inst = Instantiate(itlist[i]);
+			ScaleToAngle(inst, 15f, pos);
+			inst.position = pos;
+			instantiated.Add(inst);
+		}
+		
+		return target;
+	}
+	
 	void Quit() {
 		#if UNITY_EDITOR
 			UnityEditor.EditorApplication.isPlaying = false;
@@ -162,30 +220,38 @@ public class Test_1 : MonoBehaviour {
 	
 	// Use this for initialization
 	void Start () {
+		
+		Debug.Log("---------------");
+		Debug.Log("You need to add a controlCam like in Kitchen and Living");
+		Debug.Log("---------------");
+		
 		fpsColl = new List<float>();
 		Cursor.lockState = CursorLockMode.Locked;
-		controlCam.aspect = 1.33333f;
+		viewCam.aspect = 1.33333f;
 		
-		// Hardcoding? At this time of year, at this time of day, at this part of the country, localized entirely within your MonoBehaviour?!
-		items = new List<Transform> {ac_guitar, axe, banana, bottle, cat, chef_knife, cherry, coffee_mug, coffee_table, cola, dog, ele_guitar,
-									extinguisher, fan, fedora, fish, fruitbowl, hammer, heart, horse, jug, kitchen_chair, kitchen_table, lamp,
-									laptop, lotus_flower, microwave, moka, mushroom, pan, pear, pinapple, pliers, pot_small, printer, pumpkin,
-									rose, scissors, shoe, star, teacup, teddy_bear, traffic_cone, tree, trumpet, wine_flask, working_boot, wrench};
+		lightItems = new List<Transform>{banana, photo_camera, chef_knife, coffee_mug, cola, fish, glasses, lightbulb, lotus_flower, moka, mushroom, palette, pliers, rose, scissors, teacup, tie};
+		oneHandedItems = new List<Transform>{axe, bottle, cat, extinguisher, fedora, hammer, jug, lamp, shoe, skull, teddy_bear, violin, working_boots};
+		twoHandedItems = new List<Transform>{coffee_table, dog, fan, jacket, jeans, laptop, microwave, pot_small, printer, pumpkin, soccer_ball, traffic_cone, trumpet, wine_flask};
+		instantiated = new List<Transform>();
+		
 		resolutions = new List<Vector2> {new Vector2(40, 60), new Vector2(60, 90), new Vector2(80, 120), new Vector2(120, 150)};
-		runsPerRes = items.Count/resolutions.Count;
+		len = runsPerRes*resolutions.Count;
+		if (lightItems.Count < rows*columns || oneHandedItems.Count < rows*columns || twoHandedItems.Count < rows*columns) {
+			Debug.Log("Error! All the objects lists must have more than " + (rows*columns).ToString() + " objects!");
+			Quit();
+		}
+		
 		runCount = 0;
 		
-		Shuffle<Transform>(items);
-		Transform t = Pop(items);
-		instantiated = Instantiate(t, new Vector3(0.0f, 0.0f, 0.0f), t.rotation);
-		ScaleToAngle(instantiated, fixedAngle);
+		targ = CreateObjects();
+		controlCam.SetTarget(targ);
 		
 		begin = System.DateTime.Now;
 		answered = false;
 		readyToStart = false;
 		
 		timestamp = begin.ToString("yyyy_MM_dd_HH_mm");
-		sw = new StreamWriter(Application.dataPath + "/../Logs/Test_1/Test_1_" + timestamp + ".json");
+		sw = new StreamWriter(Application.dataPath + "/../Logs/Test_3_Surface/Test_3_Surface_" + timestamp + ".json");
 		
 		// C#'s JSON serializer is just unpleasant. I'll analyze this data with Python anyways
 		sw.WriteLine("{");
@@ -200,6 +266,12 @@ public class Test_1 : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
+		if(!answered) {
+			deltaTime += (Time.deltaTime - deltaTime) * 0.1f;
+			float fps = 1.0f / deltaTime;
+			//Debug.Log(fps);
+			fpsColl.Add(fps);
+		}
 		
 		// Can't do it at start or I'd have a race condition
 		if (runCount == 0) {
@@ -225,14 +297,30 @@ public class Test_1 : MonoBehaviour {
 				leftEye.SetBlackening(false);
 				rightEye.SetBlackening(false);
 				
-				controlCam.transform.Find("Canvas").Find("Text").GetComponent<Text>().text = "";
+				//timeout = false;
+				//timer = Timeout((float)timeLimit);
+				//StartCoroutine(timer);
+				
+				controlCam.transform.Find("Canvas").Find("lower").GetComponent<Text>().text = "";
 			}
 		} else {
-			if(!answered) {
-				deltaTime += (Time.deltaTime - deltaTime) * 0.1f;
-				float fps = 1.0f / deltaTime;
-				fpsColl.Add(fps);
+			// Time's up
+			/*
+			if(timeout && !answered) {
+				end = System.DateTime.Now;
+				elapsed = (end - begin).ToString();
+				string[] tmp = elapsed.Split(':');
+				elapsed = tmp[1] + ":" + tmp[2].Substring(0, 6);
+				
+				leftEye.SetBlackening(true);
+				rightEye.SetBlackening(true);
+				
+				//StopCoroutine(timer);
+			}*/
+			foreach (Transform item in instantiated) {
+				item.rotation = Quaternion.Euler(item.rotation.eulerAngles + new Vector3(0, 10, 0));
 			}
+			
 			// "Answer button". Can compare to zero because of dead zone.
 			if (Input.GetAxis("Confirm") != 0 && !answered) {
 				answered = true;
@@ -240,7 +328,7 @@ public class Test_1 : MonoBehaviour {
 				elapsed = (end - begin).ToString();
 				string[] tmp = elapsed.Split(':');
 				elapsed = tmp[1] + ":" + tmp[2].Substring(0, 6);
-				controlCam.transform.Find("Canvas").Find("Text").GetComponent<Text>().text = "Press Y if CORRECT,\nN if WRONG";
+				controlCam.transform.Find("Canvas").Find("lower").GetComponent<Text>().text = "Press Y if CORRECT,\nN if WRONG";
 				
 				leftEye.SetBlackening(true);
 				rightEye.SetBlackening(true);
@@ -248,31 +336,37 @@ public class Test_1 : MonoBehaviour {
 			
 			// To change the resolution: get the script and add a counter in module. Possibly group items under resolution.
 			// HOWEVER, first I need some more props.
-			if ((Input.GetKeyDown(KeyCode.Y) || Input.GetKeyDown(KeyCode.N)) && answered) {
+			if (((Input.GetKeyDown(KeyCode.Y) || Input.GetKeyDown(KeyCode.N)) && answered)) {
 				//begin = System.DateTime.Now;
 				answered = false;
 				// item
 				sw.WriteLine("\t\t\t\t\t{");
-				sw.WriteLine("\t\t\t\t\t\t\"name\" : \"" + instantiated.name.Split('(')[0] + "\",");
+				sw.WriteLine("\t\t\t\t\t\t\"name\" : \"" + targ.name.Split('(')[0] + "\",");
 				sw.WriteLine("\t\t\t\t\t\t\"result\" : \"" + (Input.GetKeyDown(KeyCode.Y) ? "CORRECT" : "WRONG") + "\",");
-				sw.WriteLine("\t\t\t\t\t\t\"elapsed\" : \"" + elapsed + "\"");
-				if ((runCount)%runsPerRes != 0) {
+				sw.WriteLine("\t\t\t\t\t\t\"elapsed\" : \"" + elapsed + "\",");
+				if ((runCount)%(runsPerRes) != 0) {
 					sw.WriteLine("\t\t\t\t\t},");
 				} else {
 					sw.WriteLine("\t\t\t\t\t}");
 				}
 				elapsed = "";
 				
-				if(items.Count > 0) {
+				if(runCount < len) {
 					// Create a new item
-					if((runCount)%runsPerRes == 0 && resolutions.Count > 0) {
-						
+					foreach (Transform inst in instantiated) {
+						Destroy(inst.gameObject);
+						controlCam.Clear();
+					}
+					instantiated.Clear();
+					targ = CreateObjects();
+					controlCam.SetTarget(targ);
+		
+					if((runCount)%(runsPerRes) == 0 && resolutions.Count > 0) {
 						Debug.Log(currRes);
 						Debug.Log(fpsColl.Average());
 						fpsColl = new List<float>();
 						
 						currRes = Pop(resolutions);
-						
 						if (leftEye != null && rightEye != null) {
 							leftEye.SetResolution(currRes);
 							rightEye.SetResolution(currRes);
@@ -286,18 +380,14 @@ public class Test_1 : MonoBehaviour {
 						sw.WriteLine("\t\t\t\t\"resolution\" : \"" + currRes.x.ToString() + "/" + currRes.y.ToString() + "\",");
 						sw.WriteLine("\t\t\t\t\"runs\" : [");
 					}
+					Debug.Log(runCount);
 					runCount++;
 					
 					readyToStart = false;
-					controlCam.transform.Find("Canvas").Find("Text").GetComponent<Text>().text = "Press Space to start";
+					controlCam.transform.Find("Canvas").Find("lower").GetComponent<Text>().text = "Press Space to start";
 					
-					Destroy(instantiated.gameObject);
-					Transform t = Pop(items);
-					instantiated = Instantiate(t, new Vector3(0.0f, 0.0f, 0.0f), t.rotation);
-					ScaleToAngle(instantiated, fixedAngle);
-					pivot.rotation = Quaternion.identity;
 				} else {
-				
+					
 					Debug.Log(currRes);
 					Debug.Log(fpsColl.Average());
 					fpsColl = new List<float>();
@@ -321,6 +411,6 @@ public class Test_1 : MonoBehaviour {
 		sw.WriteLine("}");
 		sw.Close();
 		
-		System.Diagnostics.Process.Start(Application.dataPath + "/../Logs/Test_1/Test_1_" + timestamp + ".json");
+		//System.Diagnostics.Process.Start(Application.dataPath + "/../Logs/Test_3_Surface/Test_3_Surface_" + timestamp + ".json");
 	}
 }

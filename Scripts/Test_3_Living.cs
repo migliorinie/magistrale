@@ -6,52 +6,55 @@ using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using UnityStandardAssets.Characters.FirstPerson;
 
-// Hotspot, Node and LargeObject are already in the global project namespace because of Tree_spawning.
-
-public enum Test_2FStates {
-	PREPARATION,
-	SIMULATION,
-	EVALUATION
+// Hotspot, Node and LargeObject are already in the global project namespace because of Tree_spawning. Test_3FStates because of Test_3_Kitchen.
+public enum livingLarges {
+	L_BOOKCASE,
+	L_DESK,
+	L_DOOR,
+	L_STUFF,
+	L_TABLE_CHAIRS,
+	L_TV_AREA
 }
 
-public class Test_2_Kitchen : MonoBehaviour {
 
-	public Transform cabinet;
-	// These three differ for the stove position
-	public Transform mod_kitchen_stoveleft;
-	public Transform mod_kitchen_stovemiddle;
-	public Transform mod_kitchen_stoveright;
-	public Transform refrigerator;
+public class Test_3_Living : MonoBehaviour {
+
+	// These go on the floor
+	public Transform bookcase;
+	public Transform desk;
+	public Transform stuff;
+	public Transform TV_area;
 	public Transform table_chairs;
-	public Transform kitchen_chair;
+	public Transform door;
 
-	// 23 small items
-	public Transform cereal_box;
-	public Transform chef_knife;
-	public Transform coffee_maker;
-	public Transform coffee_mug;
-	public Transform cutting_board;
-	public Transform dish_1;
-	public Transform dish_2;
-	public Transform dish_3;
-	public Transform dish_soap;
-	public Transform knife_block;
-	public Transform microwave;
-	public Transform pan;
-	public Transform pot_small;
-	public Transform vase;
-	
+	[Space(10)]
+	// table-bound small items
 	public Transform bottle;
 	public Transform cola;
-	public Transform fish;
-	public Transform jug;
-	public Transform mushroom;
-	public Transform pear;
-	public Transform pineapple;
+	public Transform fruitbowl;
+	public Transform moka;
 	public Transform teacup;
 	public Transform wine_flask;
 	
-	public Transform window;
+	[Space(10)]
+	// desk-bound
+	public Transform laptop;
+	public Transform desktop;
+	public Transform open_book;
+	public Transform closed_book;
+	public Transform coffee_mug;
+	public Transform fan;
+	public Transform scissors;
+	public Transform printer;
+	
+	[Space(10)]
+	//stuff-bound
+	public Transform ac_guitar;
+	public Transform cat;
+	public Transform ele_guitar;
+	public Transform shoes;
+	public Transform working_boots;
+	public Transform teddy_bear;
 	
 	[Space(10)]
 	public Transform marker;
@@ -69,7 +72,7 @@ public class Test_2_Kitchen : MonoBehaviour {
 	public int runs = 4;
 	//public StaticValues sval;
 	
-	private Test_2FStates state;
+	private Test_3FStates state;
 	
 	private Vector2 currRes;
 	private Transform targ;
@@ -80,7 +83,7 @@ public class Test_2_Kitchen : MonoBehaviour {
 	private bool resUpdated;
 
 	void BuildTree(Node root) {
-		/* Level 1: big items: fridge, kitchen furniture, table, cabinet
+		/* Level 1: big items
 		 * Level 2: top items
 		 *
 		 * When building big items, I'll check the content of the node
@@ -99,44 +102,103 @@ public class Test_2_Kitchen : MonoBehaviour {
 		root.parent = null;
 		root.children = new List<Node>();
 		
-		List<int> lv1 = new List<int> {0, 1, 2, 3};
+		List<int> lv1 = new List<int> {0, 1, 2, 3, 4, 5};
 		Shuffle(lv1);
-		lv1.Add(4);
 
-		List<Transform> smalls = new List<Transform>();
-		smalls.Add(cereal_box);
-		smalls.Add(chef_knife);
-		smalls.Add(coffee_maker);
-		smalls.Add(coffee_mug);
-		smalls.Add(cutting_board);
-		//smalls.Add(dish_1); // Orange and apple are too similar
-		smalls.Add(dish_2);
-		smalls.Add(dish_3);
-		smalls.Add(dish_soap);
-		smalls.Add(knife_block);
-		smalls.Add(microwave);
-		smalls.Add(pan);
-		smalls.Add(pot_small);
-		smalls.Add(vase);
+		List<Transform> table_obj = new List<Transform>();
+		table_obj.Add(bottle);
+		table_obj.Add(cola);
+		table_obj.Add(fruitbowl);
+		table_obj.Add(moka);
+		table_obj.Add(teacup);
+		table_obj.Add(wine_flask);
 		
-		smalls.Add(bottle);
-		smalls.Add(cola);
-		smalls.Add(fish);
-		smalls.Add(jug);
-		smalls.Add(mushroom);
-		smalls.Add(pear);
-		smalls.Add(pineapple);
-		smalls.Add(teacup);
-		smalls.Add(wine_flask);
-		// Not adding the window.
+		List<Transform> desk_obj = new List<Transform>();
+		// The first is a small one, the second the accessory, the last the main
+		switch ((int)Mathf.Floor(Random.value*1.99f)) {
+			case 0: {
+				desk_obj.Add(coffee_mug);
+			}
+			break;
+			case 1: {
+				desk_obj.Add(scissors);
+			}
+			break;
+		}
+		switch ((int)Mathf.Floor(Random.value*1.99f)) {
+			case 0: {
+				desk_obj.Add(fan);
+			}
+			break;
+			case 1: {
+				desk_obj.Add(printer);
+			}
+			break;
+		}
+		switch ((int)Mathf.Floor(Random.value*3.99f)) {
+			case 0: {
+				desk_obj.Add(laptop);
+			}
+			break;
+			case 1: {
+				desk_obj.Add(open_book);
+			}
+			break;
+			case 2: {
+				desk_obj.Add(desktop);
+			}
+			break;
+			case 3: {
+				desk_obj.Add(closed_book);
+			}
+			break;
+		}
+		
+		List<Transform> stuff_obj = new List<Transform>();
+		stuff_obj.Add(ac_guitar);
+		stuff_obj.Add(cat);
+		stuff_obj.Add(ele_guitar);
+		stuff_obj.Add(shoes);
+		stuff_obj.Add(working_boots);
+		stuff_obj.Add(teddy_bear);
 	
-		Shuffle(smalls);
+		Shuffle(table_obj);
+		Shuffle(stuff_obj);
 		
-		// 12 objects are instantiated. One [n-0; n-11] is made to be the target.
 		do {
-			targ = smalls[smalls.Count-(int)Mathf.Floor(Random.value*11.99f)-1];
+			// Pick a target from one of the lists.
+			switch ((int)Mathf.Floor(Random.value*2.99f)) {
+				case 0: {
+					// 4 objects instantiated
+					if(table_obj.Count <= 0) {
+						break;
+					}
+					targ = table_obj[table_obj.Count-(int)Mathf.Floor(Random.value*3.99f)-1];
+				}
+				break;
+				case 1: {
+					// 3 objects instantiated
+					if(desk_obj.Count <= 0) {
+						break;
+					}
+					targ = desk_obj[desk_obj.Count-(int)Mathf.Floor(Random.value*2.99f)-1];
+				}
+				break;
+				case 2: {
+					// 4 objects instantiated
+					if(stuff_obj.Count <= 0) {
+						break;
+					}
+					targ = stuff_obj[stuff_obj.Count-(int)Mathf.Floor(Random.value*3.99f)-1];
+				}
+				break;
+			}
 		} while (StaticValues.tested.Contains(targ));
 		StaticValues.tested.Add(targ);
+		
+		// DEBUG
+		//targ = fan;
+		
 		controlCam.SetTarget(targ);
 
 		// Low-priority but more extendible idea: create a LargeObject list like smalls, then fish from there.
@@ -145,27 +207,24 @@ public class Test_2_Kitchen : MonoBehaviour {
 			child.content = null;
 			child.parent = root;
 			child.children = new List<Node>();
-			switch ((larges)lv1[i]) {
-				case larges.L_CABINET:
-					child.largeContent = buildCabinet();
+			switch ((livingLarges)lv1[i]) {
+				case livingLarges.L_BOOKCASE:
+					child.largeContent = buildBookcase();
 					break;
-				case larges.L_KITCHEN:
-					child.largeContent = buildKitchen();
+				case livingLarges.L_DESK:
+					child.largeContent = buildDesk();
 					break;
-				case larges.L_REFRIGERATOR:
-					child.largeContent = buildFridge();
+				case livingLarges.L_DOOR:
+					child.largeContent = buildDoor();
 					break;
-				case larges.L_TABLE_CHAIRS:
-					if (Random.value > 0.5f || i == 4) {
-						child.largeContent = buildTable();
-					}
-					else {
-						Swap<int>(lv1, i, 4);
-						child.largeContent = buildChair();
-					}
+				case livingLarges.L_STUFF:
+					child.largeContent = buildStuff();
 					break;
-				case larges.L_CHAIR:
-					child.largeContent = buildChair();
+				case livingLarges.L_TABLE_CHAIRS:
+					child.largeContent = buildTable();
+					break;
+				case livingLarges.L_TV_AREA:
+					child.largeContent = buildTVArea();
 					break;
 			}
 			root.children.Add(child);
@@ -176,7 +235,16 @@ public class Test_2_Kitchen : MonoBehaviour {
 				grandchild.largeContent = null;
 				grandchild.parent = root.children[i];
 				grandchild.children = new List<Node>();
-				grandchild.content = Pop<Transform>(smalls);
+				if((livingLarges)lv1[i] == livingLarges.L_DESK) {
+					grandchild.content = Pop<Transform>(desk_obj);
+				}
+				else if((livingLarges)lv1[i] == livingLarges.L_TABLE_CHAIRS) {
+					grandchild.content = Pop<Transform>(table_obj);
+				}
+				else if((livingLarges)lv1[i] == livingLarges.L_STUFF) {
+					grandchild.content = Pop<Transform>(stuff_obj);
+				}
+				
 				root.children[i].children.Add(grandchild);
 				//Debug.Log("Adding " + grandchild.content.name + " to " + child.largeContent.prefab.name);
 			}
@@ -242,9 +310,13 @@ public class Test_2_Kitchen : MonoBehaviour {
 	}
 
 	// Get the Y angle to assign to objects from a hotspot's direction.
-	// For the moment, they are just sticking to the longer side (Z).
+	// Right now, pretty ugly patchwork
 	Quaternion TargetAngle(Vector3 rot) {
-		return Quaternion.Euler(0, 90*rot.x, 0);
+		if (rot.z != 0) {
+			return Quaternion.Euler(0, -90*rot.z, 0);
+		} else {
+			return Quaternion.Euler(0, 90 - 90*rot.x, 0);
+		}
 	}
 
 	// Returns the top position of an object
@@ -346,11 +418,20 @@ public class Test_2_Kitchen : MonoBehaviour {
 		southwest.angle = Quaternion.Euler(0, 0, 0);
 		f.hotspots.Add(southwest);
 
-		Hotspot center = new Hotspot();
-		center.position = new Vector3(0, 0, 0);
-		center.direction = new Vector3(0, 0, 0);
-		center.angle = Quaternion.Euler(0, 0, 0);
-		f.hotspots.Add(center);
+		Hotspot east = new Hotspot();
+		east.position.x = GetBounds(f.prefab).size.x/2;
+		east.position.z = 0;
+		east.direction = new Vector3(-1, 0, 0);
+		east.angle = Quaternion.Euler(0, 0, 0);
+		f.hotspots.Add(east);
+		
+		Hotspot west = new Hotspot();
+		west.position.x = (-1)*GetBounds(f.prefab).size.x/2;
+		west.position.z = 0;
+		// Both decreasing
+		west.direction = new Vector3(1, 0, 0);
+		west.angle = Quaternion.Euler(0, 0, 0);
+		f.hotspots.Add(west);
 
 		// The floor is already instantiated
 		f.instantiated = floor;
@@ -358,95 +439,90 @@ public class Test_2_Kitchen : MonoBehaviour {
 		// Probably hotspot lists should be saved in enums.
 		return f;
 	}
-
-	LargeObject buildFridge() {
-		LargeObject f = new LargeObject();
-		f.hotspots = new List<Hotspot>(); //Nothing on top yet
-		f.prefab = refrigerator;
-		f.padding = Absolute(f.prefab.rotation*new Vector3(0.15f, 0.0f, 0.0f));
-		return f;
+	
+	LargeObject buildBookcase() {
+		LargeObject b = new LargeObject();
+		b.hotspots = new List<Hotspot>(); //Nothing on top yet
+		b.prefab = bookcase;
+		b.padding = Absolute(b.prefab.rotation*new Vector3(0.0f, 0.0f, 0.0f));
+		
+		return b;
 	}
 
-	LargeObject buildCabinet() {
-		LargeObject c = new LargeObject();
-		c.hotspots = new List<Hotspot>(); //Nothing on top yet
-		c.prefab = cabinet;
-		c.padding = Absolute(c.prefab.rotation*new Vector3(0.2f, 0.0f, 0.0f));
-		return c;
+	LargeObject buildDesk() {
+		LargeObject d = new LargeObject();
+		d.hotspots = new List<Hotspot>(); //Nothing on top yet
+		d.prefab = desk;
+		d.padding = Absolute(d.prefab.rotation*new Vector3(0.15f, 0.0f, 0.0f));
+		
+		Hotspot main = new Hotspot();
+		// Positioned determined by hand
+		main.position = new Vector3(0.11f, -0.1872f, -0.1f);
+		main.direction = new Vector3(0, 0, 0);
+		main.angle = Quaternion.Euler(0, 180, 0);
+		d.hotspots.Add(main);
+		
+		Hotspot accessory = new Hotspot();
+		// Positioned determined by hand
+		accessory.position = new Vector3(0.06f, -0.1872f, 0.45f);
+		accessory.direction = new Vector3(0, 0, 0);
+		accessory.angle = Quaternion.Euler(0, 0, 0);
+		d.hotspots.Add(accessory);
+		
+		Hotspot small = new Hotspot();
+		// Positioned determined by hand
+		small.position = new Vector3(0.06f, -0.1872f, -0.52f);
+		small.direction = new Vector3(0, 0, 0);
+		small.angle = Quaternion.Euler(0, 00, 0);
+		d.hotspots.Add(small);
+		
+		return d;
 	}
-
-	LargeObject buildKitchen() {
-		LargeObject k = new LargeObject();
-		k.hotspots = new List<Hotspot>();
-		// The hardcoding hurts. As a low priority, a builder to
-		// return a new GameObject can be created.
-		switch ((int)Mathf.Floor(Random.value*3))
-		{
-			case 0:
-				k.prefab = mod_kitchen_stoveleft;
-				break;
-			case 1:
-				k.prefab = mod_kitchen_stovemiddle;
-				break;
-			case 2:
-				k.prefab = mod_kitchen_stoveright;
-				break;
-		}
-		// I'm only writing hotspots for this one.
-		// Can be changed if one places the hotspot generation inside the switch.
-		k.prefab = mod_kitchen_stovemiddle;
-		k.padding = Absolute(k.prefab.rotation*new Vector3(0.0f, 0.0f, 0.0f));
+	
+	LargeObject buildDoor() {
+		LargeObject d = new LargeObject();
+		d.hotspots = new List<Hotspot>(); //Nothing on top yet
+		d.prefab = door;
+		d.padding = Absolute(d.prefab.rotation*new Vector3(0.15f, 0.0f, 0.0f));
 		
-		Hotspot cooker = new Hotspot();
+		return d;
+	}
+	
+	LargeObject buildStuff() {
+		LargeObject s = new LargeObject();
+		s.hotspots = new List<Hotspot>(); //Nothing on top yet
+		s.prefab = stuff;
+		s.padding = Absolute(s.prefab.rotation*new Vector3(0.1f, 0.0f, 0.1f));
+		
+		Hotspot hs6h = new Hotspot();
 		// Positioned determined by hand
-		cooker.position = new Vector3(-0.0315f, -0.221f, 0.3166f);
-		cooker.direction = new Vector3(0, 0, 0);
-		cooker.angle = Quaternion.Euler(0, -90, 0);
-		k.hotspots.Add(cooker);
+		hs6h.position = new Vector3(0.0f, 0.7f, 0.0f);
+		hs6h.direction = new Vector3(0, 0, 0);
+		hs6h.angle = Quaternion.Euler(0, -90, 0);
+		s.hotspots.Add(hs6h);
 		
-		Hotspot whiteleft = new Hotspot();
+		Hotspot hs9h = new Hotspot();
 		// Positioned determined by hand
-		whiteleft.position = new Vector3(-0.06f, -0.221f, 1.896f);
-		whiteleft.direction = new Vector3(0, 0, 0);
-		whiteleft.angle = Quaternion.Euler(0, -90, 0);
-		k.hotspots.Add(whiteleft);
+		hs9h.position = new Vector3(0.7f, 0.0f, 0.0f);
+		hs9h.direction = new Vector3(0, -0, 0);
+		hs9h.angle = Quaternion.Euler(0, 0, 0);
+		s.hotspots.Add(hs9h);
 		
-		Hotspot drawerleft = new Hotspot();
+		Hotspot hs12h = new Hotspot();
 		// Positioned determined by hand
-		drawerleft.position = new Vector3(0.196f, -0.221f, 1.337f);
-		drawerleft.direction = new Vector3(0, 0, 0);
-		drawerleft.angle = Quaternion.Euler(0, -90, 0);
-		k.hotspots.Add(drawerleft);
+		hs12h.position = new Vector3(0.0f, -0.7f, 0.0f);
+		hs12h.direction = new Vector3(0, 0, 0);
+		hs12h.angle = Quaternion.Euler(0, 90, 0);
+		s.hotspots.Add(hs12h);
 		
-		Hotspot drawerright = new Hotspot();
+		Hotspot hs3h = new Hotspot();
 		// Positioned determined by hand
-		drawerright.position = new Vector3(-0.055f, -0.221f, 0.829f);
-		drawerright.direction = new Vector3(0, 0, 0);
-		drawerright.angle = Quaternion.Euler(0, -90, 0);
-		k.hotspots.Add(drawerright);
+		hs3h.position = new Vector3(-0.7f, 0.0f, 0.0f);
+		hs3h.direction = new Vector3(0, 0, 0);
+		hs3h.angle = Quaternion.Euler(0, 180, 0);
+		s.hotspots.Add(hs3h);
 		
-		Hotspot washer = new Hotspot();
-		// Positioned determined by hand
-		washer.position = new Vector3(0.0f, -0.221f, -0.847f);
-		washer.direction = new Vector3(0, 0, 0);
-		washer.angle = Quaternion.Euler(0, -90, 0);
-		k.hotspots.Add(washer);
-		
-		Hotspot rightmost_l = new Hotspot();
-		// Positioned determined by hand
-		rightmost_l.position = new Vector3(0.0f, -0.221f, -1.289f);
-		rightmost_l.direction = new Vector3(0, 0, 0);
-		rightmost_l.angle = Quaternion.Euler(0, -90, 0);
-		k.hotspots.Add(rightmost_l);
-		
-		Hotspot rightmost_r = new Hotspot();
-		// Positioned determined by hand
-		rightmost_r.position = new Vector3(0.20f, -0.221f, -1.846f);
-		rightmost_r.direction = new Vector3(0, 0, 0);
-		rightmost_r.angle = Quaternion.Euler(0, -90, 0);
-		k.hotspots.Add(rightmost_r);
-		
-		return k;
+		return s;
 	}
 
 	LargeObject buildTable() {
@@ -484,31 +560,24 @@ public class Test_2_Kitchen : MonoBehaviour {
 		t.hotspots.Add(hs3h);
 
 		t.prefab = table_chairs;
-		t.padding = Absolute(t.prefab.rotation*new Vector3(0.7f, 0.0f, 0.1f));
+		t.padding = Absolute(t.prefab.rotation*new Vector3(0.4f, 0.0f, 0.1f));
 		return t;
 	}
-
-	LargeObject buildChair() {
-		LargeObject c = new LargeObject();
-		c.hotspots = new List<Hotspot>(); //Nothing on top yet
-
-		Hotspot hsCenter = new Hotspot();
-		// Positioned determined by hand. Remember that it's aligned to the original orientation.
-		hsCenter.position = new Vector3(0.0f, 0.0f, -0.5842f);
-		hsCenter.direction = new Vector3(0, 0, 0);
-		hsCenter.angle = Quaternion.Euler(0, 180, 0);
-		c.hotspots.Add(hsCenter);
-
-		c.prefab = kitchen_chair;
-		c.padding = Absolute(c.prefab.rotation*new Vector3(0.3f, 0.0f, 0.0f));
-		return c;
+	
+	LargeObject buildTVArea() {
+		LargeObject tv = new LargeObject();
+		tv.hotspots = new List<Hotspot>(); //Nothing on top yet
+		tv.prefab = TV_area;
+		tv.padding = Absolute(tv.prefab.rotation*new Vector3(0.15f, 0.0f, 0.0f));
+		
+		return tv;
 	}
 	
 	/*HOTSPOTS
-	 * Chair - 1
+	 * Desk - 2
 	 * Table - 4
-	 * Kitchen - 7
-	 * TOTAL - 12 for 23 items
+	 * Stuff - 2
+	 * TOTAL - 8 for 19 items (considering doubles, 16 without)
 	 */
 	 
 	void InstTree(Node n) {
@@ -524,6 +593,8 @@ public class Test_2_Kitchen : MonoBehaviour {
 						TargetAngle(n.parent.largeContent.hotspots[index].direction)),
 					n.parent.largeContent.hotspots[index].angle*
 						TargetAngle(n.parent.largeContent.hotspots[index].direction)*n.largeContent.prefab.rotation);
+						
+				//Debug.Log(n.parent.largeContent.hotspots[index].position.ToString() + " - " + n.largeContent.instantiated.transform.name);
 				// Large objects have children
 				for (int i = 0; i<n.children.Count; i++) {
 					InstTree(n.children[i]);
@@ -548,7 +619,7 @@ public class Test_2_Kitchen : MonoBehaviour {
 		if (!StaticValues.initialized) {
 			StaticValues.timestamp = System.DateTime.Now.ToString("yyyy_MM_dd_HH_mm");
 			StaticValues.runCount = 0;
-			StaticValues.sw = new StreamWriter(Application.dataPath + "/../Logs/Test_2_Kitchen/Test_2_Kitchen_" + StaticValues.timestamp + ".json");
+			StaticValues.sw = new StreamWriter(Application.dataPath + "/../Logs/Test_3_Living/Test_3_LivingRoom_" + StaticValues.timestamp + ".json");
 			StaticValues.resolutions = new List<Vector2> {new Vector2(40, 60), new Vector2(60, 90), new Vector2(80, 120), new Vector2(120, 150)};
 			StaticValues.runsPerRes = runs/StaticValues.resolutions.Count;
 			StaticValues.tested = new List<Transform>();
@@ -572,7 +643,7 @@ public class Test_2_Kitchen : MonoBehaviour {
 	void Start () {
 		Cursor.lockState = CursorLockMode.Locked;
 		
-		state = Test_2FStates.PREPARATION;
+		state = Test_3FStates.PREPARATION;
 		Node root = new Node();
 		BuildTree(root);
 		InstTree(root);
@@ -580,7 +651,7 @@ public class Test_2_Kitchen : MonoBehaviour {
 		VRController = RigidbodyFirstPersonController.GetInstance().transform;
 		leftEye = VRController.Find("Fove Interface").Find("FOVE Eye (Left)").GetComponent<applyShader>();
 		rightEye = VRController.Find("Fove Interface").Find("FOVE Eye (Right)").GetComponent<applyShader>();
-		VRController.position = new Vector3(-0.04f, -1.04f, -1.88f);
+		VRController.position = new Vector3(-0.894f, -1.102f, -0.711f);
 		
 		// I can maybe add a second FOVE interface with a "Please Wait" screen
 		leftEye.SetBlackening(true);
@@ -594,20 +665,9 @@ public class Test_2_Kitchen : MonoBehaviour {
 	// Update is called once per frame
 	void Update () {
 		switch (state) {
-			case Test_2FStates.PREPARATION:
+			case Test_3FStates.PREPARATION:
 				// Possibly allow to rotate the object or rotate it automatically
 				
-				/*
-				 *** TODO *** TODO *** TODO ***
-				 * PROBLEM WITH THE CONTROL SCHEME:
-				 * The user is using a keyboard/joystick to move
-				 * The controller needs a keyboard to evaluate the answers.
-				 * Without a joystick, there's a conflict.
-				 * With a joystick, I need to remember to disable the controller during PREPARATION
-				 *
-				 * Alternatively, making a separate control scheme: the controller has WASD to rotate the preview and the
-				 * spacebar to activate the test, the subject has the mouse to give an answer and the arrows to move.
-				 */
 				if ((StaticValues.runCount)%StaticValues.runsPerRes == 0 && StaticValues.resolutions.Count > 0 && !resUpdated) {
 					currRes = Pop(StaticValues.resolutions);
 					if (leftEye != null && rightEye != null) {
@@ -627,7 +687,7 @@ public class Test_2_Kitchen : MonoBehaviour {
 				}
 				
 				if (Input.GetKeyDown(KeyCode.Space)) {
-					state = Test_2FStates.SIMULATION;
+					state = Test_3FStates.SIMULATION;
 					begin = System.DateTime.Now;
 					controlCam.transform.Find("Canvas").Find("lower").GetComponent<Text>().text = "";
 					controlCam.transform.parent.GetComponent<Pivot_rotate>().active = false;
@@ -637,7 +697,7 @@ public class Test_2_Kitchen : MonoBehaviour {
 				}
 			break;
 			
-			case Test_2FStates.SIMULATION:
+			case Test_3FStates.SIMULATION:
 				if(Input.GetAxis("Confirm") != 0) {
 					controlCam.transform.Find("Canvas").Find("lower").GetComponent<Text>().text = "Press Y if CORRECT,\nN if WRONG";
 					end = System.DateTime.Now;
@@ -647,17 +707,16 @@ public class Test_2_Kitchen : MonoBehaviour {
 					
 					leftEye.SetBlackening(true);
 					rightEye.SetBlackening(true);
-					state = Test_2FStates.EVALUATION;
+					state = Test_3FStates.EVALUATION;
 				}
 			break;
 			
-			case Test_2FStates.EVALUATION:
+			case Test_3FStates.EVALUATION:
 				if (Input.GetKeyDown(KeyCode.Y) || Input.GetKeyDown(KeyCode.N)) {
-					state = Test_2FStates.PREPARATION;
+					state = Test_3FStates.PREPARATION;
 					
 					controlCam.transform.Find("Canvas").Find("lower").GetComponent<Text>().text = "Press Space to start";
 					
-					// item
 					StaticValues.sw.WriteLine("\t\t\t\t\t{");
 					// Child 2 is the instantiated clone
 					StaticValues.sw.WriteLine("\t\t\t\t\t\t\"name\" : \"" + targ.name.Split('(')[0] + "\",");
@@ -676,7 +735,6 @@ public class Test_2_Kitchen : MonoBehaviour {
 	}
 	
 	void Quit() {
-		
 		if (StaticValues.runCount == runs-1) {
 			#if UNITY_EDITOR
 				UnityEditor.EditorApplication.isPlaying = false;
@@ -686,7 +744,7 @@ public class Test_2_Kitchen : MonoBehaviour {
 		} else {
 			StaticValues.runCount++;
 			resUpdated = false;
-			SceneManager.LoadScene("Test_2_Kitchen");
+			SceneManager.LoadScene("Test_3_Living");
 		}
 	}
 	
@@ -703,6 +761,6 @@ public class Test_2_Kitchen : MonoBehaviour {
 		// main object
 		StaticValues.sw.WriteLine("}");
 		StaticValues.sw.Close();
-		System.Diagnostics.Process.Start(Application.dataPath + "/../Logs/Test_2_Kitchen/Test_2_Kitchen_" + StaticValues.timestamp + ".json");
+		System.Diagnostics.Process.Start(Application.dataPath + "/../Logs/Test_3_Living/Test_3_LivingRoom_" + StaticValues.timestamp + ".json");
 	}
 }
